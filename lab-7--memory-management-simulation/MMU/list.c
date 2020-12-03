@@ -114,15 +114,43 @@ void list_add_ascending_by_address(list_t *l, block_t *newblk){
    *    node_t *c = l.head;
    *    Insert newblk After Current Node if:   newblk->start > c->start
    */
-    node_t *c = l->head;
-    node_t* newNode = node_alloc(newblk);
-    newNode->next = NULL;
-    while (c->next != NULL){
-      c = c->next;
+    node_t *p;
+    node_t *c;
+    node_t *newNode = node_alloc(newblk);
+  
+    if (l->head == NULL){
+      l->head = newNode;
     }
-    if (newNode->blk->start > c->blk->start){
+    else {
+      p = l->head;
+      c = l->head;
+    if (c->next != NULL){
+      if(newNode->blk->start <= c->blk->start) {//if its less than place it before because it is in ascending order
+            newNode->next = l->head;
+            l->head = newNode;
+         }
+         else {
+            while(c != NULL && newNode->blk->start >= c->blk->start) {
+                 p = c;
+                 c = c->next;    
+            }
+            p->next = newNode;
+            newNode->next = c;
+         }
       c->next = newNode;
+      newNode->next = NULL;
     }
+    else{
+      if(newblk->start <= c->blk->start) {
+        newNode->next = l->head;
+        l->head = newNode;
+      }
+      else{
+        c->next = newNode;
+        newNode->next = NULL;
+      }
+    }
+   }
 }
 
 void list_add_ascending_by_blocksize(list_t *l, block_t *newblk){
@@ -140,17 +168,54 @@ void list_add_ascending_by_blocksize(list_t *l, block_t *newblk){
    * 
    *    USE the compareSize()
    */
-    int blocksize;
-    node_t *c = l->head;
-    node_t* newNode = node_alloc(newblk);
-    newNode->next = NULL;
-    blocksize = c->blk->end - c->blk->start + 1;
-    while (c->next != NULL){
-      c = c->next;
+  
+    node_t *p;
+    node_t *c;
+    node_t *newNode = node_alloc(newblk);
+    int blocksize, newNodeblksize;
+    newNodeblksize = newNode->blk->end - newNode->blk->start;
+     
+  
+    if (l->head == NULL){
+      l->head = newNode;
     }
-    if (compareSize(blocksize, newNode->blk) == true){
+    else {
+      p = l->head;
+      c = l->head;
+      
+      blocksize = c->blk->end - c->blk->start + 1;
+      
+    if (c->next != NULL){
+      if(newNodeblksize <= blocksize) {//if current block size is greater than new blk size
+            newNode->next = l->head;
+            l->head = newNode;
+         }
+         else {
+            while(c != NULL && compareSize(blocksize, newNode->blk)) {
+                 p = c;
+                 c = c->next;
+              
+                 if (c != NULL){
+                   blocksize = c->blk->end - c->blk->start;
+                 }
+            }
+            p->next = newNode;
+            newNode->next = c;
+         }
       c->next = newNode;
+      newNode->next = NULL;
     }
+    else{
+      if(newNodeblksize <= blocksize) {
+        newNode->next = l->head;
+        l->head = newNode;
+      }
+      else{
+        c->next = newNode;
+        newNode->next = NULL;
+      }
+    }
+   }
 }
 
 void list_add_descending_by_blocksize(list_t *l, block_t *blk){
@@ -215,20 +280,24 @@ void list_coalese_nodes(list_t *l){
    * 
    * USE the compareSize()
    */
+  node_t *p = l->head->next;
   node_t *c = l->head;
-  node_t *prev;
+
+  
   block_t *b = c->blk;
-  while (l->head != NULL){
-    prev = c = l->head;
+  while (c != NULL){
     if (compareSize(c->blk->start, b) == true){
-      prev->blk->end = c->blk->end;
+      p->blk->end = c->blk->end;
+      p->next = c->next;
+      
+      free(c->blk);
+      node_free(c);
+   
     }
     else{
-      prev = c;
+      p = c;
       c = c->next;
     }
-    prev->next = c->next;
-    node_free(c);
   }
 }
 
@@ -284,7 +353,7 @@ block_t* list_remove_from_front(list_t *l) {
 
 block_t* list_remove_at_index(list_t *l, int index) { 
   int i;
-  block_t* value = NULL;
+  block_t *value = NULL;
   
   bool found = false;
   
@@ -419,10 +488,10 @@ bool list_is_in_by_pid(list_t *l, int pid){
    * Look at list_is_in_by_size()
    * 
   */
-  bool in_list;
-  node_t* c =l->head;
-  block_t* b = c->blk;
+  bool in_list = false;
+  node_t *c =l->head;
   while (c!=NULL){
+    block_t *b = c->blk;
     if (comparePid(pid, b) == true){
       in_list = true;
     }
