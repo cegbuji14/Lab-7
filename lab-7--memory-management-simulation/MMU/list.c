@@ -280,8 +280,8 @@ void list_coalese_nodes(list_t *l){
    * 
    * USE the compareSize()
    */
-  node_t *p = l->head->next;
-  node_t *c = l->head;
+  node_t *c = l->head->next;
+  node_t *p = l->head;
 
   
   block_t *b = c->blk;
