@@ -63,25 +63,45 @@ void allocate_memory(list_t * freelist, list_t * alloclist, int pid, int blocksi
     *     d. set the fragment->end = original blk.end before you changed it in #4
     *     e. add the fragment to the FREE_LIST based on policy
     */
-    block_t* b;
-    block_t* b2;
-    node_t* c = freelist->head;
-    b = c->blk;
-    b2 = c->blk;
+  
+    node_t *c = freelist->head;
+    node_t *p = NULL;
+    node_t *nullblk = NULL;
+    block_t *b;
     while (c!=NULL){
+      b = c->blk;
       if ((b->end - b->start) >= blocksize){
-        c = NULL;
-        b->pid = pid;
-        b->end = b->start + blocksize - 1;
-        list_add_ascending_by_address(alloclist, b);
+        nullblk = c;
+        break;
         }
-      else{
-        printf("Error: Memory Allocation <blocksize> blocks\n");
+        p = c;
+        c = c->next;
+     }
+     
+     if (nullblk){
+       if (p == false){
+         freelist->head = freelist->head->next;
+         } 
+       else{
+         p->next = nullblk->next;
+         }
       }
+      else{
+        printf("Error: Memory Allocation %d blocks\n", blocksize);
+        return;
+      }
+      b = nullblk->blk;
+      int end_blk;
+      end_blk = b->end;
+      b->pid = pid;
+      b->end = b->start + blocksize - 1;
+      list_add_ascending_by_address(alloclist, b); 
+      
+      if (b->end != end_blk){
         block_t* fragment = (block_t*)malloc(sizeof(block_t));
         fragment->pid = 0;
         fragment->start = b->end + 1;
-        fragment->end = b2->end;
+        fragment->end = end_blk;
         switch(policy){
           case 1:
             list_add_to_back(freelist, fragment);
@@ -90,7 +110,6 @@ void allocate_memory(list_t * freelist, list_t * alloclist, int pid, int blocksi
           case 3:
             list_add_descending_by_blocksize(freelist, fragment);
         }
-        c = c->next;
       }
     }
 
@@ -109,27 +128,42 @@ void deallocate_memory(list_t * alloclist, list_t * freelist, int pid, int polic
     * 3. set the blk.pid back to 0
     * 4. add the blk back to the FREE_LIST based on policy.
     */
-    block_t* b;
-    node_t* c = alloclist->head;
+    
+    block_t *b;
+    block_t *nullblk;
+    node_t *c = alloclist->head;
+    node_t *p = NULL;
     b = c->blk;
-    while (c!=NULL){
-      if (b->pid == pid){
-        c = NULL;
-        b->pid = 0;
-        switch(policy){
-          case 1:
-            list_add_to_back(freelist, b);
-          case 2:
-            list_add_ascending_by_blocksize(freelist, b);
-          case 3:
-            list_add_descending_by_blocksize(freelist, b);
-        }
-      }
-      else{
-        printf("Error: Can't locate Memory Used by PID: <pid>");
-      }
+    nullblk = NULL;
+    while (c!=NULL && b->pid != pid){
+      b = c->blk;
+      p = c;
       c = c->next;
-    }       
+      }
+      
+    if (c == NULL){
+      printf("Error: Can't locate Memory Used by PID: %d\n", pid);
+      return;      
+    }
+    if (p){
+      nullblk = c->blk;
+      p->next = c->next;
+     }
+     else {
+      nullblk = c->blk;
+      alloclist->head = alloclist->head->next;     
+     }
+     
+     nullblk->pid = 0;
+  
+      switch(policy){
+        case 1:
+          list_add_to_back(freelist, b);
+        case 2:
+          list_add_ascending_by_blocksize(freelist, b);
+        case 3:
+          list_add_descending_by_blocksize(freelist, b);
+        }     
 }
 
 list_t* coalese_memory(list_t * list){
